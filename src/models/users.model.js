@@ -53,8 +53,8 @@ let userSchema = new mongoose.Schema(
 
 //DON NOTY USE ARROW FUNCTION BCZO THE DO NOT HAVE CONTEXT
 //USE ASYNC FUNCTION BCOZ IT TAKES SOME TIM TO DO ITS WORK
-userSchema.pre("save", async (next) => {
-  if (this.isModified("password")) return next();
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
   this.password = await bcryptjs.hash(this.password, 10);
   next();

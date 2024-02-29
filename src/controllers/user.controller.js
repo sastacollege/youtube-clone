@@ -1,70 +1,76 @@
-import asyncHandler from "./../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/users.model.js";
-import { upload } from "./../middlewares/multer.middleware.js";
+import { ApiError } from "./../utils/ApiError.js";
+import { User } from "./../models/users.model.js";
 import { uploadOnCloudanary } from "./../utils/cloudinary.service.js";
 import { ApiResponse } from "./../utils/ApiResponse.js";
 
-let registerUser = asyncHandler(async (req, res) => {
-  //get user details from frontend
-  //validation - not empty
-  //check if user already exists: username, email
-  //check for images, check for avatar
-  //upload them to cloudinary, avatar
-  //create user object – create entry in db
-  //remove password and refresh token field from response
-  //check for user creation
-  //return res
+let registerUser = async (req, res) => {
+  //JSON
+  let { username, email, fullname, password } = req.body;
 
-  //get user details from frontend
-  const { username, email, password, fullname } = req.body;
-
-  //validation - not empty
-  //you can also do email validation also please do this yourself
-  if ([username, email, password, fullname].some((el) => el?.trim() === "")) {
-    throw ApiError(400, "All Fields Are Required");
+  //CHECK EMPTY FIELDS
+  if (
+    [username, email, fullname, password].some((field) => field.trim() === "")
+  ) {
+    throw new ApiError(400, "All Fields Are Required");
   }
 
-  //check if user already exists: username, email
-  if (User.find({ $or: [{ username }, { email }] })) {
-    throw ApiError(500, "USER ALREADY EXIST");
+  //USER ALREADY EXIST
+  let userExist = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+  if (userExist) {
+    throw new ApiError(409, "User with email or username already exist");
   }
 
-  //check for images, check for avatar
+  //MULTER
   let avatarLocalPath = req.files?.avatar[0]?.path;
-  let coverImageLocalPath = req.files?.coverImage[0]?.path;
-
-  if (!avatarLocalPath) {
-    throw ApiError(400, "Avatar file is required");
+  // let coverImageLocalPath = req.files?.coverImage[0]?.path;
+  //doing this just because to avoid error
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
   }
 
-  //upload them to cloudinary, avatar
-  const avatar = await uploadOnCloudanary(avatarLocalPath);
-  const coverImage = await uploadOnCloudanary(coverImageLocalPath);
-  if (!avatar) throw ApiError(400, "Avatar file is required");
+  //avatar file is required
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "avatar file is required");
+  }
 
-  //create user object – create entry in db
+  //Upload avatar and coverImage to cloudinary and remeber you upload the cloudinary image path to database
+  let avatar = await uploadOnCloudanary(avatarLocalPath);
+  let coverImage = await uploadOnCloudanary(coverImageLocalPath);
+
+  //check avatar file is exist on cloudnary or not bczo if that is not present app will crash
+  if (!avatar) throw new ApiError(400, "avatar file is required");
+
+  //UPLOAD TO DATABASE
   let user = await User.create({
-    fullname,
-    username: username.toLowercase(),
+    username,
     email,
+    fullname,
     password,
-    avatar: avatar.url,
+    avatar: avatar?.url,
     coverImage: coverImage?.url || "",
   });
 
-  //Check whether user has created or not
-  let isUserCreated = await User.findById(user._id).select(
+  //Check userCreated
+  const userCreated = await User.find(user._id).select(
     "-password -refreshToken",
   );
-  if (isUserCreated) {
-    throw ApiError(500, "Something went wrong while creating the user");
+
+  if (!userCreated) {
+    throw new ApiError(500, "Something went wrong while registering user");
   }
 
-  //return res
   return res
     .status(201)
-    .json(new ApiResponse(200, isUserCreated, "User Registered Successfully"));
-});
+    .json(
+      new ApiResponse(201, userCreated, "USER CREATED SUCCESSFULLY 🎉🎉🎉"),
+    );
+};
 
-export default registerUser;
+export { registerUser };
