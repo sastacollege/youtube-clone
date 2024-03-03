@@ -1,5 +1,5 @@
 import express from "express";
-import cookie_parser from "cookie-parser";
+import cookie from "cookie-parser";
 import cors from "cors";
 
 //APP
@@ -18,7 +18,7 @@ app.use(
     limit: "16kb",
   }),
 );
-app.use(cookie_parser());
+app.use(cookie());
 
 app.get((req, res) => {
   res.send("Hello");

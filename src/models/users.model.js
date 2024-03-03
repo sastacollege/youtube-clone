@@ -61,8 +61,8 @@ userSchema.pre("save", async function (next) {
 });
 
 //CUSTOM METHODS
-userSchema.methods.isPasswordCorrect = async function (passsword) {
-  return await bcryptjs.compare(passsword, this.passsword);
+userSchema.methods.isPasswordCorrect = async function (password) {
+  return await bcryptjs.compare(password, this.password);
 };
 
 //CREATE ACCESSTOKEN
@@ -76,23 +76,23 @@ userSchema.methods.generateAccessToken = function () {
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRRY,
+      expiresIn: "20s",
     },
   );
 
-  return toekn;
+  return token;
 };
 
 //CREATE REFRESH TOKEN
 //SAME LIKE ACCESS TOKEN BUT DIFFERENT USECASE
-userSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateRefreshToken = function () {
   let token = jwt.sign(
     {
       _id: this.id,
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+      expiresIn: "20s",
     },
   );
   return token;
