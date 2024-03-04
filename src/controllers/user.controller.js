@@ -219,4 +219,160 @@ let tokenRefreshing = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, tokenRefreshing };
+//GET CURRENT USE
+//IF IT IS LOGGED THEN YOU CAN GET CURRENT USER IT IS SELF UNDERSTOOD
+let currentUser = asyncHandler(async (req, res) => {
+  //as we know if we are logged in then we already passed through auth middleware there we have req.user
+  let user = req.user;
+
+  return res.status(200).json({
+    status: "SUCCESS",
+    user,
+  });
+});
+
+//CHANGE PASSWORD
+//IT MUST BE LOGGED IN TO GET LOGGED IN
+let changePassword = asyncHandler(async (req, res) => {
+  //AUTH MIDDLEWARE
+  let user = req.user;
+
+  //USER DATA REQUIRED TO CAHNGE PASSWORD
+  let { oldPassword, newPassword } = req.body;
+
+  //COMPARE PASSWORD
+  let isPasswordCorrect = user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "INCORRECT PASSWORD");
+  }
+
+  let userDatabase = await User.findById(user._id);
+  userDatabase.password = newPassword;
+
+  await userDatabase.save({ validateBeforeSave: false });
+
+  return res.status(200).json({
+    message: "PASSWORD CHANGED",
+  });
+});
+
+//UPDATE ANY FIELD
+let updateAccDetail = asyncHandler(
+  asyncHandler(async (req, res) => {
+    //FIELD THAT YOU WANT TO UPDATE
+    let { username, email, fullname } = req.body;
+
+    if (!username || !email || !fullname) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    let userDB = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          username,
+          email,
+          fullname,
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    return res.status(200).json({
+      status: "Success",
+      newData: userDB,
+    });
+  }),
+);
+
+//UPDATE FILES
+//1.Avatar
+const updateAvatarImage = asyncHandler(async (req, res) => {
+  try {
+    let avatarLocalPath = req.file?.path;
+
+    if (!avatarLocalPath) {
+      return res.status(400).json({ error: "Avatar file Path is not found" });
+    }
+
+    let avatar = await uploadOnCloudanary(avatarLocalPath);
+
+    if (!avatar.url) {
+      return res
+        .status(400)
+        .json({ error: "Avatar URL from Cloudinary is not found" });
+    }
+
+    let userid = req.user?._id;
+
+    let user = await User.findByIdAndUpdate(
+      userid,
+      { $set: { avatar: avatar.url } },
+      { new: true },
+    ).select("-password");
+
+    return res
+      .status(200)
+      .json({ success: true, user, message: "Avatar updated successfully" });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
+  }
+});
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+  try {
+    let coverImageLocalPath = req.file?.path;
+    console.log(coverImageLocalPath);
+
+    if (!coverImageLocalPath) {
+      return res
+        .status(400)
+        .json({ error: "CoverImage file Path is not found" });
+    }
+
+    let coverImage = await uploadOnCloudanary(coverImageLocalPath);
+
+    if (!coverImage.url) {
+      return res
+        .status(400)
+        .json({ error: "Avatar URL from Cloudinary is not found" });
+    }
+
+    let userid = req.user?._id;
+
+    let user = await User.findByIdAndUpdate(
+      userid,
+      { $set: { coverImage: coverImage.url } },
+      { new: true },
+    ).select("-password");
+
+    return res.status(200).json({
+      success: true,
+      user,
+      message: "CoverImage updated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
+  }
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  tokenRefreshing,
+  currentUser,
+  changePassword,
+  updateAccDetail,
+  updateAvatarImage,
+  updateCoverImage,
+};
