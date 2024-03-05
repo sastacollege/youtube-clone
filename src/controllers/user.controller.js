@@ -365,6 +365,13 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   }
 });
 
+const sayHello = async (req, res) => {
+  res.status(200).json({
+    status: "Success",
+    message: "Hello Reza From Render Server",
+  });
+};
+
 export {
   registerUser,
   loginUser,
@@ -375,4 +382,5 @@ export {
   updateAccDetail,
   updateAvatarImage,
   updateCoverImage,
+  sayHello,
 };

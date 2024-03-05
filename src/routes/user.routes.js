@@ -13,6 +13,7 @@ import {
   updateAccDetail,
   updateAvatarImage,
   updateCoverImage,
+  sayHello,
 } from "./../controllers/user.controller.js";
 
 router.route("/register").post(
@@ -39,5 +40,7 @@ router
 router
   .route("/update-coverImage")
   .post(authorization, upload.single("coverImage"), updateCoverImage);
+
+router.route("/sayhello").get(sayHello);
 
 export default router;
